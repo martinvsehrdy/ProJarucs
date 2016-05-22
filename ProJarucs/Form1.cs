@@ -18,12 +18,12 @@ namespace ProJaru
         UserControl2[] poNHodn;
         String[] porty;
         String[] portyCOM;
+        int detekceCOM;
         Tkomun odesilac;
         //TComPort comPort1;
         const int usercontrol1max = 4;
         const int usercontrol2max = 1;
-        char[] strPort;
-        int strPortPoc;
+        string strPort;
 
         
         TKlavesyRezie poKazdeHodn;
@@ -32,20 +32,16 @@ namespace ProJaru
         public Form1()
         {
             InitializeComponent();
-        }
-
-        private void Form1_Load(object sender, EventArgs e)
-        {
-            strPort = new Char[13];
-            strPortPoc = 0;
+            strPort = "";
             labelChyba.Text = "";
+            panel1.Location = new Point(300, 110);
             poKazdeHodn = new TKlavesyRezie(button4);
             usercontrol = new UserControl1[usercontrol1max];
             for (int i = 0; i < usercontrol1max; i++)
             {
                 usercontrol[i] = new UserControl1();
                 usercontrol[i].Location = new Point(comboBox1.Location.X, 50 + i * 50);
-                usercontrol[i].label1.Text += (i+1).ToString()+":";
+                usercontrol[i].label1.Text += (i + 1).ToString() + ":";
                 usercontrol[i].Parent = groupBox1;
             }
 
@@ -56,8 +52,14 @@ namespace ProJaru
                 poNHodn[i].Location = new Point(0, 148 + i * 55);
                 poNHodn[i].Parent = groupBox3;
             }
+        }
+
+        private void Form1_Activated(object sender, EventArgs e)
+        {
             button1_Click(null, null);      // nacte vsechny ostatní aplikace
-            button3_Click(null, null);      // nacte vsechny porty
+            button3_Click1(null, null);      // nacte vsechny porty
+            //Tkomun.PostMessage(button3.Handle, (int)Tkomun.WMessages.WM_LBUTTONDOWN, (IntPtr)1, (IntPtr)0);
+            //Tkomun.PostMessage(button3.Handle, (int)Tkomun.WMessages.WM_LBUTTONUP, (IntPtr)1, (IntPtr)0);
         }
 
         private void button1_Click(object sender, EventArgs e)
@@ -81,22 +83,83 @@ namespace ProJaru
             }
 
         }
+        private void button3_Click1(object sender, EventArgs e)
+        {
+            Cursor = Cursors.WaitCursor;
+            panel1.Visible = true;
+            label6.Visible = true;
+            porty = SerialPort.GetPortNames();
+            comboBox2.Items.Clear();
+            portyCOM = new String[0];
+            comboBox2.Text = "COM-port s interfejsem";
+            timer2.Interval = (int)numericUpDown1.Value;
+            timer2.Enabled = true;
+            detekceCOM = 0;
+
+        }
+
+        private void timer2_Tick(object sender, EventArgs e)
+        {
+            detekceCOM++;
+            if (porty.Length == 0 && detekceCOM % 2 == 1)
+            {
+                if (serialPort1.IsOpen) serialPort1.Close();
+                timer2.Enabled = false;
+                detekceCOM = -1;
+                if (comboBox2.Items.Count == 1)
+                {
+                    comboBox2.SelectedIndex = 0;
+                }
+                Cursor = Cursors.Default;
+                panel1.Visible = false;
+                label6.Visible = false;
+                return;
+            }
+            switch (detekceCOM % 2)
+            {
+                case 1:
+                    if (serialPort1.IsOpen) serialPort1.Close();
+                    String myPort=porty[0];
+                    serialPort1.PortName = myPort;
+                    serialPort1.Open();
+                    String[] porty1 = new String[porty.Length - 1];
+                    for (int i = 0; i < porty.Length-1; i++)
+                    {
+                        porty1[i] = porty[i + 1];
+                    }
+                    porty = porty1;
+                    serialPort1.WriteLine("I" + (char)13);
+                    break;
+                case 0:
+                    serialPort1.WriteLine("N" + (char)13);
+                    
+                    
+                    break;
+            }
+
+        }
 
         private void button3_Click(object sender, EventArgs e)
         {
+            Cursor = Cursors.WaitCursor;
+            panel1.Visible = true;
+            label6.Visible = true;
             porty = SerialPort.GetPortNames();
             comboBox2.Items.Clear();
             portyCOM = new String[0];
             comboBox2.Text = "COM-port s interfejsem";
             foreach (String port in porty)
             {
+                Thread.Sleep(100);
                 SerialPort serialp1 = new SerialPort();
                 serialp1.PortName = port;
                 string q = "";
                 try
                 {
                     serialp1.Open();
+                    Thread.Sleep(100);
                     serialp1.WriteLine("I" + (char)13);
+                    Thread.Sleep(100);
                     while (serialp1.IsOpen && serialp1.BytesToRead != 0)
                     {
                         int a = serialp1.ReadByte();
@@ -104,7 +167,9 @@ namespace ProJaru
                         //else break;
                     }
                     q = q + " (";
+                    Thread.Sleep(100);
                     serialp1.WriteLine("N" + (char)13);
+                    Thread.Sleep(100);
                     while (serialp1.IsOpen && serialp1.BytesToRead != 0)
                     {
                         int a = serialp1.ReadByte();
@@ -124,11 +189,12 @@ namespace ProJaru
                     portyCOM1[portyCOM.Length] = port;
                     portyCOM = portyCOM1;
                 }
-                
+
                 try
                 {
                     if (serialp1.IsOpen)
                     {
+                        Thread.Sleep(100);
                         serialp1.Close();
                     }
                 }
@@ -140,6 +206,9 @@ namespace ProJaru
             {
                 comboBox2.SelectedIndex = 0;
             }
+            Cursor = Cursors.Default;
+            panel1.Visible = false;
+            label6.Visible = false;
         }
 
         private void serialP_zpracovat(byte data)
@@ -152,11 +221,34 @@ namespace ProJaru
             {
                 if (data == 13)
                 {
+                    if (0<=detekceCOM)
+                    {
+                        switch (detekceCOM % 2)
+                        {
+                            case 1:
+                                strPort += " (";
+                                //comboBox2.Items.Add(strPort);
+                                break;
+                            case 0:
+                                String[] portyCOM1 = new String[portyCOM.Length + 1];
+                                for (int i = 0; i < portyCOM.Length; i++)
+                                {
+                                    portyCOM1[i] = portyCOM[i];
+                                }
+                                portyCOM1[portyCOM1.Length - 1] = serialPort1.PortName;
+                                portyCOM = portyCOM1;
+                                strPort += ")";
+                                comboBox2.Items.Add(strPort);
+                                strPort = "";
+                                break;
+                        }
+                        return;
+                    }
                     int vstup = Convert.ToInt32(strPort[1]) - 48;     // převede ze znaku na ASCII kod, kde '0' je 48
                     if (strPort[0] == '0' && strPort[2] == 'A')
                     {
                         if (textBox2.Text == "") textBox2.Text = ".";
-                        int plen = strPortPoc - 3 + textBox2.TextLength - 1;
+                        int plen = strPort.Length - 3 + textBox2.TextLength - 1;
                         Char[] p1 = new Char[plen];
                         int i = 0;
                         while (strPort[i + 3] != '.')
@@ -216,12 +308,12 @@ namespace ProJaru
                         }
                     }
                     //listBox1.Items.Add(new String(strPort));
-                    strPortPoc = 0;
+                    strPort = "";
                 }
                 else
                 {
-                    strPort[strPortPoc] = (char)data;
-                    strPortPoc++;
+                    strPort = strPort + (char)data;
+
                 }
             }
         }
@@ -397,6 +489,7 @@ namespace ProJaru
                 Application.RemoveMessageFilter(poKazdeHodn);
             }
         }
+
 
 
     }
