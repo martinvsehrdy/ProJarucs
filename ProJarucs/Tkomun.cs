@@ -41,7 +41,6 @@ namespace ProJaru
         [DllImport("user32.dll")]
         static extern IntPtr GetFocus();
 
-        
         IntPtr[] hOkna;     //všechny dostupné programy
         IntPtr[] hFocus;    //a jejich object s fokusem (kam se bude psát)
         int pocOkna;
@@ -152,7 +151,6 @@ namespace ProJaru
             WM_KEYDOWN = 0x100,  //Key down 
             WM_KEYUP = 0x101,   //Key up 
             WM_CHAR = 0x102,
-            WM_ACTIVATEAPP = 0x001C,
         }
 
         /// <summary> 
@@ -273,6 +271,8 @@ namespace ProJaru
             EM_LINEFROMCHAR = 0x00C9,
             EM_LINEINDEX = 0x00BB,
             EM_CANUNDO = 0x00C6,
+
+
         }
 
         public void inBufferKlav(String q)
