@@ -54,12 +54,20 @@ namespace ProJaru
             }
         }
 
+        private void Form1_Load(object sender, EventArgs e)
+        {
+            Refresh();
+            button1_Click(null, null);      // nacte vsechny ostatní aplikace
+            System.Windows.Forms.Timer tim = new System.Windows.Forms.Timer();
+            tim.Interval = 10;
+            tim.Tick+=new System.EventHandler(this.button3_Click);
+            tim.Start();
+            //button3_Click(null, null);      // nacte vsechny porty
+        }
+
         private void Form1_Activated(object sender, EventArgs e)
         {
-            button1_Click(null, null);      // nacte vsechny ostatní aplikace
-            button3_Click1(null, null);      // nacte vsechny porty
-            //Tkomun.PostMessage(button3.Handle, (int)Tkomun.WMessages.WM_LBUTTONDOWN, (IntPtr)1, (IntPtr)0);
-            //Tkomun.PostMessage(button3.Handle, (int)Tkomun.WMessages.WM_LBUTTONUP, (IntPtr)1, (IntPtr)0);
+            if (comboBox2.SelectedIndex < 0) button3_Click(null, null);
         }
 
         private void button1_Click(object sender, EventArgs e)
@@ -93,7 +101,7 @@ namespace ProJaru
             portyCOM = new String[0];
             comboBox2.Text = "COM-port s interfejsem";
             timer2.Interval = (int)numericUpDown1.Value;
-            timer2.Enabled = true;
+            timer2.Start();
             detekceCOM = 0;
 
         }
@@ -104,7 +112,7 @@ namespace ProJaru
             if (porty.Length == 0 && detekceCOM % 2 == 1)
             {
                 if (serialPort1.IsOpen) serialPort1.Close();
-                timer2.Enabled = false;
+                timer2.Stop();
                 detekceCOM = -1;
                 if (comboBox2.Items.Count == 1)
                 {
@@ -144,6 +152,12 @@ namespace ProJaru
             Cursor = Cursors.WaitCursor;
             panel1.Visible = true;
             label6.Visible = true;
+            Refresh();
+            if (sender is System.Windows.Forms.Timer)
+            {
+                System.Windows.Forms.Timer tim = sender as System.Windows.Forms.Timer;
+                tim.Stop();
+            }
             porty = SerialPort.GetPortNames();
             comboBox2.Items.Clear();
             portyCOM = new String[0];
@@ -489,7 +503,6 @@ namespace ProJaru
                 Application.RemoveMessageFilter(poKazdeHodn);
             }
         }
-
 
 
     }
