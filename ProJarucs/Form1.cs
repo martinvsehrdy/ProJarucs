@@ -1,4 +1,5 @@
-﻿using System;
+﻿//#define DEVEL
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -81,6 +82,19 @@ namespace ProJaru
             }
 
         }
+
+        private void konecNacitaniPortu()
+        {
+            if (button3.InvokeRequired)
+            {
+                button3.Invoke(new Action(konecNacitaniPortu));
+            }
+            else
+            {
+                button3.Enabled = true;
+                this.Cursor = Cursors.Default;
+            }
+        }
         private void combobox2_add(String str)
         {
             if (comboBox2.InvokeRequired)
@@ -131,15 +145,29 @@ namespace ProJaru
                 catch (Exception)
                 {
                 }
+                #if(DEVEL)
                 if (q.Length > 3)
                 {
-                    //comboBox2.Items.Add(q);
+                    combobox2_add(port+q);
+                }
+                else
+                {
+                    combobox2_add(port);
+                }
+                String[] portyCOM1 = new String[portyCOM.Length + 1];
+                for (int i = 0; i < portyCOM.Length; i++) portyCOM1[i] = portyCOM[i];
+                portyCOM1[portyCOM.Length] = port;
+                portyCOM = portyCOM1;
+#else
+                if (q.Length > 3)
+                {
                     combobox2_add(q);
                     String[] portyCOM1 = new String[portyCOM.Length + 1];
                     for (int i = 0; i < portyCOM.Length; i++) portyCOM1[i] = portyCOM[i];
                     portyCOM1[portyCOM.Length] = port;
                     portyCOM = portyCOM1;
                 }
+#endif
 
                 try
                 {
@@ -153,6 +181,7 @@ namespace ProJaru
                 }
 
             }
+            konecNacitaniPortu();
         }
 
         private void button3_Click(object sender, EventArgs e)
@@ -161,7 +190,8 @@ namespace ProJaru
             comboBox2.Items.Clear();
             portyCOM = new String[0];
             comboBox2.Text = "COM-port s interfejsem";
-
+            button3.Enabled = false;
+            this.Cursor = Cursors.WaitCursor;
             Thread myThread = new Thread(getOnePortInfo);
             myThread.Start();
 
