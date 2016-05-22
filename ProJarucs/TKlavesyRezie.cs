@@ -70,6 +70,7 @@ namespace ProJaru
 
         public TKlavesyRezie()
         {
+            myButton = null;
             zpravy=new Message[pocZpr];
             reset();
             enabled = false;
@@ -82,6 +83,17 @@ namespace ProJaru
             reset();
             enabled = false;
         }
+        public TKlavesyRezie(TKlavesyRezie inKlavesy)
+        {
+
+            zpravy = new Message[pocZpr];
+            reset();
+            enabled = false;
+            for (int i = 0; i < pocZpr; i++)
+            {
+                zpravy[i] = inKlavesy.getzprava(i);
+            }
+        }
 
         public void reset()//poc:=0;
         {
@@ -92,6 +104,12 @@ namespace ProJaru
         {
             if(poc>pocZpr) return;
             if( 0<poc && zpravy[poc].WParam==zpravy[poc-1].WParam) return;
+            if ((int)zprava.WParam == 13)
+            {
+                zpravy[poc] = zprava;
+                poc++;
+                zprava.WParam = (IntPtr)10;
+            }
             zpravy[poc]=zprava;
             poc++;
         }
@@ -143,6 +161,9 @@ namespace ProJaru
                     break;
                 case 9:
                     result="Tab";
+                    break;
+                case 10:
+                    result = "Enter";
                     break;
                 case 12:
                     result="clear";

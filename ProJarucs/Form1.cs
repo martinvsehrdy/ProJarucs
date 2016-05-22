@@ -8,40 +8,53 @@ using System.Text;
 using System.Windows.Forms;
 using System.IO.Ports;
 using System.Threading;
+using System.Runtime.InteropServices;
 
 namespace ProJaru
 {
     public partial class Form1 : Form
     {
         UserControl1[] usercontrol;
+        UserControl2[] poNHodn;
+        String[] porty;
+        String[] portyCOM;
         Tkomun odesilac;
+        //TComPort comPort1;
         const int usercontrol1max = 4;
-        Char[] strPort;
+        const int usercontrol2max = 1;
+        char[] strPort;
         int strPortPoc;
-        int odeslanoHodnot;
-        TKlavesyRezie poKazdeHodn, poNHodn;
-        bool detekceCOM=false;
+
+        
+        TKlavesyRezie poKazdeHodn;
+        
 
         public Form1()
         {
             InitializeComponent();
         }
 
-        
-
         private void Form1_Load(object sender, EventArgs e)
         {
             strPort = new Char[13];
             strPortPoc = 0;
-            odeslanoHodnot = 0;
+            labelChyba.Text = "";
             poKazdeHodn = new TKlavesyRezie(button4);
-            poNHodn = new TKlavesyRezie(button5);
             usercontrol = new UserControl1[usercontrol1max];
             for (int i = 0; i < usercontrol1max; i++)
             {
                 usercontrol[i] = new UserControl1();
-                usercontrol[i].Location = new Point(40, 70 + i * 30);
-                usercontrol[i].Parent = tabPage1;
+                usercontrol[i].Location = new Point(comboBox1.Location.X, 50 + i * 50);
+                usercontrol[i].label1.Text += (i+1).ToString()+":";
+                usercontrol[i].Parent = groupBox1;
+            }
+
+            poNHodn = new UserControl2[usercontrol2max];
+            for (int i = 0; i < usercontrol2max; i++)
+            {
+                poNHodn[i] = new UserControl2();
+                poNHodn[i].Location = new Point(0, 148 + i * 55);
+                poNHodn[i].Parent = groupBox3;
             }
             button1_Click(null, null);      // nacte vsechny ostatní aplikace
             button3_Click(null, null);      // nacte vsechny porty
@@ -71,102 +84,138 @@ namespace ProJaru
 
         private void button3_Click(object sender, EventArgs e)
         {
-            //prohlídne všechny COM-porty
-            String[] porty = SerialPort.GetPortNames();
+            porty = SerialPort.GetPortNames();
             comboBox2.Items.Clear();
+            portyCOM = new String[0];
             comboBox2.Text = "COM-port s interfejsem";
             foreach (String port in porty)
             {
+                SerialPort serialp1 = new SerialPort();
+                serialp1.PortName = port;
+                string q = "";
                 try
                 {
-                    /*serialPort1.PortName = port;
-                    serialPort1.BaudRate = 9600;
-                    serialPort1.Open();
-                    //String q;
-                    if (serialPort1.IsOpen)
+                    serialp1.Open();
+                    serialp1.WriteLine("I" + (char)13);
+                    while (serialp1.IsOpen && serialp1.BytesToRead != 0)
                     {
-                        serialPort1.Write("I" + (char)13);
-                        Thread.Sleep(1000);
-
-                        //q = new string(strPort);
-                        //if( 0<serialPort1.ReadBufferSize ) 
-                          //  q=serialPort1.ReadLine();
-                        serialPort1.Close();
-                    }//*/
-                    comboBox2.Items.Add(port);
-                    
+                        int a = serialp1.ReadByte();
+                        if (a != 13) q = q + (char)a;
+                        //else break;
+                    }
+                    q = q + " (";
+                    serialp1.WriteLine("N" + (char)13);
+                    while (serialp1.IsOpen && serialp1.BytesToRead != 0)
+                    {
+                        int a = serialp1.ReadByte();
+                        if (a != 13) q = q + (char)a;
+                        //else break;
+                    }
+                    q = q + ")";
                 }
                 catch (Exception)
                 {
-                    comboBox2.Items.Add(port);
                 }
-                //*/
+                if (q.Length > 3)
+                {
+                    comboBox2.Items.Add(q);
+                    String[] portyCOM1 = new String[portyCOM.Length + 1];
+                    for (int i = 0; i < portyCOM.Length; i++) portyCOM1[i] = portyCOM[i];
+                    portyCOM1[portyCOM.Length] = port;
+                    portyCOM = portyCOM1;
+                }
+                
+                try
+                {
+                    if (serialp1.IsOpen)
+                    {
+                        serialp1.Close();
+                    }
+                }
+                catch (Exception)
+                {
+                }
             }
-            
+            if (comboBox2.Items.Count == 1)
+            {
+                comboBox2.SelectedIndex = 0;
+            }
         }
 
         private void serialP_zpracovat(byte data)
         {
-            if (listBox1.InvokeRequired)
+            if (InvokeRequired)
             {
-                listBox1.Invoke(new Action<byte>(serialP_zpracovat), data);
+                Invoke(new Action<byte>(serialP_zpracovat), data);
             }
             else
             {
                 if (data == 13)
                 {
+                    int vstup = Convert.ToInt32(strPort[1]) - 48;     // převede ze znaku na ASCII kod, kde '0' je 48
                     if (strPort[0] == '0' && strPort[2] == 'A')
                     {
                         if (textBox2.Text == "") textBox2.Text = ".";
                         int plen = strPortPoc - 3 + textBox2.TextLength - 1;
                         Char[] p1 = new Char[plen];
                         int i = 0;
-                        while (strPort[i+3] != '.')
+                        while (strPort[i + 3] != '.')
                         {
-                            p1[i] = strPort[i+3];
+                            p1[i] = strPort[i + 3];
                             i++;
                         }
                         int j;
-                        for(j=0;j<textBox2.TextLength;j++)
+                        for (j = 0; j < textBox2.TextLength; j++)
                         {
                             p1[i + j] = textBox2.Text[j];
                         }
                         i += j;
-                        while (i<plen)
+                        while (i < plen)
                         {
                             p1[i] = strPort[i + 3 - textBox2.TextLength + 1];
                             i++;
                         }
+                        Double hodn = Convert.ToDouble(new String(p1));
 
-                        int cil=comboBox1.SelectedIndex;
+                        int cil = kamPoslatHodnotu(vstup);
                         // odešle změřenou hodnotu
-                        odeslanoHodnot++;
-                        odesilac.odeslatklav(cil, new String(p1)+textBox3.Text);
-                        for(i=0;i<poKazdeHodn.getpoc();i++)
+                        usercontrol[vstup - 1].odeslanoHodnot++;
+                        odesilac.inBufferKlav(hodn.ToString()+ textBox3.Text);
+                        for (i = 0; i < poKazdeHodn.getpoc(); i++)
                         {
                             //poKazdeHodn
                             //if((int)poKazdeHodn.getzprava(i).Msg==(int)Tkomun.WMessages.WM_KEYDOWN)
-                                odesilac.odeslatZpravu(cil, poKazdeHodn.getzprava(i));
+                            odesilac.inBufferZprava(poKazdeHodn.getzprava(i));
                         }
-                        if (numericUpDown1.Value!=0 && odeslanoHodnot % numericUpDown1.Value == 0)
+                        for (j = 0; j < usercontrol2max; j++)
                         {
-                            odesilac.odeslatklav(cil, textBox4.Text);
-                            for (i = 0; i < poKazdeHodn.getpoc(); i++)
-                            {
-                                //poNHodn
-                                odesilac.odeslatZpravu(cil, poNHodn.getzprava(i));
-                            }
-                        }
-                        
-                    }
-                    
 
-                    Char[] p = new Char[strPortPoc];
-                    for (int i = 0; i < strPortPoc; i++)
-                    {
-                        p[i] = strPort[i];
+                            if (poNHodn[j].numericUpDown1.Value != 0 && usercontrol[vstup - 1].odeslanoHodnot % poNHodn[j].numericUpDown1.Value == 0)
+                            {
+                                odesilac.inBufferKlav(poNHodn[j].textBox1.Text);
+                                for (i = 0; i < poNHodn[j].getPocZprav(); i++)
+                                {
+                                    //poNHodn
+                                    odesilac.inBufferZprava(poNHodn[j].getZprava(i));
+                                }
+                            }
+
+                        }
+                        odesilac.odeslat(cil);
+                        listBox1.Items.Add(hodn.ToString()+" ze vstupu "+vstup.ToString());
                     }
-                    listBox1.Items.Add(new String(p));
+                    if (strPort[0] == '9')      // nějaká chyba
+                    {
+                        if (strPort[2] == '1') labelChyba.Text = "nepřipojené nebo vypnuté měřidlo na vstupu: " + vstup.ToString();
+                        if (strPort[2] == '2') labelChyba.Text = "chyba formátu dat došlých z měřidla na vstupu: " + vstup.ToString();
+                        if (checkBoxChyboveHlaseni.Checked)
+                        {
+                            int cil = kamPoslatHodnotu(vstup);
+                            odesilac.inBufferKlav("chyba");
+                            odesilac.odeslat(cil);
+                        }
+                    }
+                    //listBox1.Items.Add(new String(strPort));
                     strPortPoc = 0;
                 }
                 else
@@ -176,96 +225,123 @@ namespace ProJaru
                 }
             }
         }
-        private void serialPort1_DataReceived(object sender, System.IO.Ports.SerialDataReceivedEventArgs e)
+        private void serialPort1_DataReceived(object sender, SerialDataReceivedEventArgs e)
         {
             try
             {
-                while (serialPort1.IsOpen && serialPort1.ReadBufferSize != 0)
+                while (serialPort1.IsOpen && serialPort1.BytesToRead != 0)
                 {
                     int a = serialPort1.ReadByte();
                     serialP_zpracovat((byte)a);
                 }
-                //*/
-                
             }
             catch (Exception)
             {
-
             }
         }
 
+        private int kamPoslatHodnotu(int vstup)
+        {
+            int result = 0;
+            if (usercontrol[vstup - 1].checkBox1.Checked)       // posílat hodnoty do hlavní aplikace
+            {
+                result = comboBox1.SelectedIndex;
+            }
+            else if (usercontrol[vstup - 1].checkBox2.Checked)     // poslat hodnoty do aplikace uvedene v usercontrolu
+            {
+                result = usercontrol[vstup - 1].comboBox1.SelectedIndex;
+            }
+            return result;
+        }
         private void povolitPrvky(bool povol)
         {
             bool enabl = povol;
 
             label1.Enabled = enabl;
-            label2.Enabled = enabl;
             label3.Enabled = enabl;
             label4.Enabled = enabl;
             label5.Enabled = enabl;
-            label6.Enabled = enabl;
-            numericUpDown1.Enabled = enabl;
             textBox1.Enabled = enabl;
             textBox2.Enabled = enabl;
             textBox3.Enabled = enabl;
-            textBox4.Enabled = enabl;
             spustitToolStripMenuItem.Enabled = enabl;
             comboBox1.Enabled = enabl;
             comboBox2.Enabled = enabl;
             checkBox1.Enabled = enabl;
+            checkBoxChyboveHlaseni.Enabled = enabl;
             button1.Enabled = enabl;
-            button2.Enabled = enabl;
             button3.Enabled = enabl;
             button4.Enabled = enabl;
-            button5.Enabled = enabl;
             for (int i = 0; i < usercontrol1max; i++)
             {
                 usercontrol[i].Enabled = enabl;
+            }
+            for (int i = 0; i < usercontrol2max; i++)
+            {
+                poNHodn[i].Enabled = enabl;
             }
         }
 
         private void spustitToolStripMenuItem_Click(object sender, EventArgs e)
         {
+            for (int i = 0; i < usercontrol1max; i++) usercontrol[i].odeslanoHodnot = 0;
             if (comboBox2.SelectedIndex < 0)
             {
                 MessageBox.Show("Musíte zadat COM port s interfejsem");
                 return;
             }
+            bool v = false;
+            for (int i = 0; i < usercontrol1max; i++)
+            {
+                if ((usercontrol[i].checkBox1.Checked && comboBox1.SelectedIndex>=0) ||
+                    usercontrol[i].checkBox2.Checked && usercontrol[i].comboBox1.SelectedIndex>=0)
+                    v = true;
+
+            }
+            if (!v)
+            {
+                MessageBox.Show("Musíte zvolit cílový program");
+                return;
+            }
             try
             {
-                serialPort1.PortName = comboBox2.Text;
+                serialPort1.PortName = portyCOM[comboBox2.SelectedIndex];
                 serialPort1.BaudRate = 9600;
                 serialPort1.Open();
                 if (serialPort1.IsOpen)
                 {
                     povolitPrvky(false);
-                    
-                    
+                    tabControl1.SelectedTab = tabPage2;
                 }
             }
             catch (Exception)
             {
             }
-            int a;
             try
             {
-                a = Convert.ToInt32(textBox1.Text);
-                timer1.Interval = a;
-                timer1.Start();
+                if (checkBox1.Checked)
+                {
+                    int a = Convert.ToInt32(textBox1.Text);
+                    timer1.Interval = a;
+                    timer1.Start();
+                    button2.Enabled = false;
+                }
             }
             catch (Exception)
             {
             }
-            listBox1.Items.Clear();
         }
        
         private void zastavitToolStripMenuItem_Click(object sender, EventArgs e)
         {
+            if (!serialPort1.IsOpen) return;
             timer1.Stop();
             if (serialPort1.IsOpen) serialPort1.Close();
             if (!serialPort1.IsOpen)
             {
                 povolitPrvky(true);
+                button2.Enabled = true;
+                tabControl1.SelectedTab = tabPage1;
             }
         }
 
@@ -281,7 +357,8 @@ namespace ProJaru
 
         private void timer1_Tick(object sender, EventArgs e)
         {
-            if (checkBox1.Checked && serialPort1.IsOpen) serialPort1.Write("A" + (char)13);
+            if (serialPort1.IsOpen) serialPort1.Write("A" + (char)13);
+            //if (checkBox1.Checked && comPort1.IsOpen) comPort1.Write("A" + (char)13);
         }
 
         private void přečteníIdentifikacenázvuInterfejsuToolStripMenuItem_Click(object sender, EventArgs e)
@@ -298,6 +375,10 @@ namespace ProJaru
         {
             if (serialPort1.IsOpen) serialPort1.WriteLine("V" + (char)13);
         }
+
+        
+
+        
 
         private void button4_Click(object sender, EventArgs e)
         {
@@ -316,41 +397,6 @@ namespace ProJaru
                 Application.RemoveMessageFilter(poKazdeHodn);
             }
         }
-
-        private void button5_Click(object sender, EventArgs e)
-        {
-            if (!poNHodn.enabled)
-            {
-                // zapnout
-                poNHodn.enabled = true;
-                poNHodn.reset();
-                button5.Text = "";
-                Application.AddMessageFilter(poNHodn);
-            }
-            else
-            {
-                poNHodn.enabled = false;
-                button5.Text = "nic";
-                Application.RemoveMessageFilter(poNHodn);
-            }
-        }
-
-        private void button4_KeyDown(object sender, KeyEventArgs e)
-        {
-            if (poKazdeHodn != null && poKazdeHodn.enabled) listBox2.Items.Add(e.KeyValue);
-        }
-
-        private void listBox2_MouseClick(object sender, MouseEventArgs e)
-        {
-            listBox2.Items.Clear();
-            listBox2.Items.Add(poKazdeHodn.getpoc());
-            for (int i = 0; i < poKazdeHodn.getpoc(); i++)
-            {
-                listBox2.Items.Add(poKazdeHodn.getzprava(i).Msg + ": " + poKazdeHodn.getzprava(i).WParam);
-            }
-        }
-
-
 
 
     }

@@ -11,6 +11,7 @@ namespace ProJaru
 {
     public partial class UserControl1 : UserControl
     {
+        public int odeslanoHodnot = 0;
         public UserControl1()
         {
             InitializeComponent();
@@ -20,11 +21,6 @@ namespace ProJaru
         {
             checkBox2.Enabled = !checkBox1.Checked;
             comboBox1.Enabled = !checkBox1.Checked;
-        }
-
-        public void Aktualizovat()
-        {
-
         }
     }
 }

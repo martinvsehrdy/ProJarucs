@@ -41,16 +41,20 @@ namespace ProJaru
         [DllImport("user32.dll")]
         static extern IntPtr GetFocus();
 
-        IntPtr[] hOkna;
-        IntPtr[] hFocus;
+        IntPtr[] hOkna;     //všechny dostupné programy
+        IntPtr[] hFocus;    //a jejich object s fokusem (kam se bude psát)
         int pocOkna;
         IntPtr selfOkno;
+        Message[] msgBuffer;
+        int pocBuffer;
 
         public Tkomun(IntPtr hlavniform)
         {
             selfOkno = hlavniform;
+            pocBuffer = 0;
             loadprogramy();
         }
+        
         public void loadprogramy()
         {
             pocOkna = 0;
@@ -78,7 +82,7 @@ namespace ProJaru
             //return ikonec;
         }
 
-        public IntPtr getFocusedControl(int index)
+        private IntPtr getFocusedControl(int index)
         {
             if ((0 <= index) && (index < pocOkna))
             {
@@ -97,9 +101,15 @@ namespace ProJaru
                     AttachThreadInput(activeWindowThread, thisWindowThread, true);
                     IntPtr focusedControlHandle = GetFocus();
                     AttachThreadInput(activeWindowThread, thisWindowThread, false);
-
+                    //Thread.Sleep(5);
                     SetForegroundWindow(selfOkno);
+                    //Thread.Sleep(200);
                     hFocus[index] = focusedControlHandle;
+
+                    /*if (forgrHandle != GetForegroundWindow())
+                    {
+                        SetForegroundWindow(forgrHandle);
+                    }//*/
                 }
                 return hFocus[index];
             }
@@ -126,7 +136,7 @@ namespace ProJaru
 
             return " ";
         }
-
+        
         ///summary> 
         /// Virtual Messages 
         /// </summary> 
@@ -265,12 +275,8 @@ namespace ProJaru
 
         }
 
-        public void odeslatklav(int ikam, String q)
+        public void inBufferKlav(String q)
         {
-            IntPtr forgrHandle = GetForegroundWindow();
-            IntPtr hWndcile = getFocusedControl(ikam);
-
-
             for (int i = 0; i < q.Length; i++)
             {
                 IntPtr c;
@@ -282,29 +288,59 @@ namespace ProJaru
                     c = (IntPtr)q[i];
                 }
                 else
+                {
                     if (q[i] == (char)(13))
                         c = (IntPtr)VKeys.VK_RETURN;
                     else
                     {
                         c = (IntPtr)VKeys.VK_OEM_COMMA;
                     }
-                PostMessage(hWndcile, (int)WMessages.WM_CHAR, c, IntPtr.Zero);
+                }
+                //PostMessage(hWndcile, (int)WMessages.WM_CHAR, c, IntPtr.Zero);
+                Message a = new Message();
+                a.Msg=(int)WMessages.WM_CHAR;
+                a.WParam=c;
+                a.LParam=IntPtr.Zero;
+                inBufferZprava(a);
+                
             }//*/
-            //PostMessage(hWndcile, (int)WMessages.WM_CHAR, (IntPtr)VKeys.VK_RETURN, IntPtr.Zero);
-            Thread.Sleep(20);
+            
+        }
+
+        public void inBufferZprava(Message msg)
+        {
+            Message[] p = new Message[pocBuffer + 1];
+            for (int j = 0; j < pocBuffer; j++)
+            {
+                p[j] = msgBuffer[j];
+            }
+            p[pocBuffer] = msg;
+            pocBuffer++;
+            msgBuffer = p;
+            //PostMessage(getFocusedControl(ikam), msg.Msg, msg.WParam, msg.LParam);
+        }
+
+        public void odeslat(int ikam)
+        {
+            if ((0 > ikam) || (ikam >= pocOkna)) return;
+            IntPtr forgrHandle = GetForegroundWindow();
+            if (hFocus[ikam] == IntPtr.Zero)
+            {
+                hFocus[ikam] = getFocusedControl(ikam);
+            }//*/
+            for (int j = 0; j < pocBuffer; j++)
+            {
+                Message msg = msgBuffer[j];
+                PostMessage(hFocus[ikam], msg.Msg, msg.WParam, msg.LParam);
+                Thread.Sleep(5);
+            }
+            pocBuffer = 0;
+            msgBuffer = new Message[0];
+            
             if (forgrHandle != GetForegroundWindow())
             {
                 SetForegroundWindow(forgrHandle);
-            }
-        }
-
-        public void odeslatZpravu(int ikam, Message msg)
-        {
-            //if(0x100<=msg.Msg && msg.Msg<0x102)
-                PostMessage(getFocusedControl(ikam), msg.Msg, msg.WParam, msg.LParam);
-            //else
-            //    SendMessage(getFocusedControl(ikam), msg.Msg, (int)msg.WParam, (int)msg.LParam);
-            //Thread.Sleep(10);
+            }//*/
         }
 
 
